@@ -97,7 +97,7 @@ class RecipeViewSet(ModelViewSet):
             f' - {ingredient["quantity"]}'
             for ingredient in queryset_sort
         ])
-        shopping_list += f'\n\nFoodgram'
+        shopping_list += '\n\nFoodgram'
 
         filename = f'{user.username}_shopping_list.txt'
         response = HttpResponse(shopping_list, content_type='text/plain')
