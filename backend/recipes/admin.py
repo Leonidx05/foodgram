@@ -5,8 +5,11 @@ from .models import (Favorites, Ingredient, Recipe, RecipeIngredient,
 
 
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'author',)
+    list_display = ('name', 'author', 'favorite_list')
     list_filter = ('author', 'name', 'tags__name',)
+
+    def favorite_list(self, obj):
+        return obj.favorites.count()
 
 
 class IngredientAdmin(admin.ModelAdmin):

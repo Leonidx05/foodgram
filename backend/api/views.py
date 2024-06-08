@@ -33,47 +33,48 @@ class RecipeViewSet(ModelViewSet):
             return RecipeSerializer
         return RecipeCreateSerializer
 
-    @action(detail=True,
-            methods=['POST', 'DELETE'],
-            permission_classes=[IsAuthenticated]
-            )
-    def favorite(self, request, pk):
+    @staticmethod
+    def add_to(model, user, pk):
         recipe = get_object_or_404(Recipe, id=pk)
-        favorite = Favorites.objects.filter(user=request.user, recipe=recipe)
-        if request.method == 'POST':
-            if favorite.exists():
-                return Response('Этот рецепт уже в избранном',
-                                status=status.HTTP_400_BAD_REQUEST)
-            Favorites.objects.create(user=request.user, recipe=recipe)
-            serializer = RecipeShortSerializer(recipe)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        if favorite.exists():
-            favorite.delete()
+        content = model.objects.filter(user=user, recipe=recipe)
+        if content.exists():
+            return Response('Этот рецепт уже в добавлен',
+                            status=status.HTTP_400_BAD_REQUEST)
+        model.objects.create(user=user, recipe=recipe)
+        serializer = RecipeShortSerializer(recipe)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @staticmethod
+    def delete_from(model, user, pk):
+        recipe = get_object_or_404(Recipe, id=pk)
+        content = model.objects.filter(user=user, recipe=recipe)
+        if content.exists():
+            content.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response('Рецепт уже удален из избранного',
+        return Response('Рецепт уже удален',
                         status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True,
-            methods=['POST', 'DELETE'],
+            methods=['POST'],
+            permission_classes=[IsAuthenticated]
+            )
+    def favorite(self, request, pk):
+        return self.add_to(Favorites, request.user, pk)
+
+    @favorite.mapping.delete
+    def delete_favorite(self, request, pk):
+        return self.delete_from(Favorites, request.user, pk)
+
+    @action(detail=True,
+            methods=['POST'],
             permission_classes=[IsAuthenticated]
             )
     def shopping_cart(self, request, pk):
-        recipe = get_object_or_404(Recipe, id=pk)
-        shopping_cart = ShoppingCart.objects.filter(
-            user=request.user, recipe=recipe
-        )
-        if request.method == 'POST':
-            if shopping_cart.exists():
-                return Response('Этот рецепт уже в корзине',
-                                status=status.HTTP_400_BAD_REQUEST)
-            ShoppingCart.objects.create(user=request.user, recipe=recipe)
-            serializer = RecipeShortSerializer(recipe)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        if shopping_cart.exists():
-            shopping_cart.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response('Рецепт уже удален из корзины',
-                        status=status.HTTP_400_BAD_REQUEST)
+        return self.add_to(ShoppingCart, request.user, pk)
+
+    @shopping_cart.mapping.delete
+    def delete_shopping_cart(self, request, pk):
+        return self.delete_from(ShoppingCart, request.user, pk)
 
     @action(methods=['GET'],
             detail=False,
@@ -82,7 +83,7 @@ class RecipeViewSet(ModelViewSet):
     def download_shopping_cart(self, request):
         user = request.user
         queryset = RecipeIngredient.objects.filter(
-            recipe__shopping_cart__user=user
+            recipe__shoppingcart__user=user
         )
         queryset_sort = queryset.values('ingredient__name',
                                         'ingredient__measurement_unit',
@@ -130,19 +131,23 @@ class CustomUserViewSet(UserViewSet):
         return super().get_permissions()
 
     @action(detail=True,
-            methods=['POST', 'DELETE'],
+            methods=['POST'],
             permission_classes=[IsAuthenticated]
             )
     def subscribe(self, request, **kwargs):
         user = request.user
         author = get_object_or_404(User, id=self.kwargs.get('id'))
-        if request.method == 'POST':
-            serializer = SubscriptionsSerializer(author,
-                                                 data=request.data,
-                                                 context={'request': request})
-            serializer.is_valid(raise_exception=True)
-            Subscriptions.objects.create(user=user, author=author)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        serializer = SubscriptionsSerializer(author,
+                                             data=request.data,
+                                             context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        Subscriptions.objects.create(user=user, author=author)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @subscribe.mapping.delete
+    def delete_subscribe(self, request, **kwargs):
+        user = request.user
+        author = get_object_or_404(User, id=self.kwargs.get('id'))
         subscription = get_object_or_404(Subscriptions,
                                          user=user,
                                          author=author)

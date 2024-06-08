@@ -1,29 +1,33 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models import Q, F
+
+from foodgram.constants import EMAIL_MAX, USER_MAX
 
 
 class User(AbstractUser):
-    REQUIRED_FIELDS = ['email', 'first_name', 'last_name']
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['first_name', 'last_name', 'username']
     email = models.EmailField(
-        max_length=256,
+        max_length=EMAIL_MAX,
         unique=True,
         verbose_name='E-mail'
     )
     username = models.CharField(
-        max_length=150,
+        max_length=USER_MAX,
         unique=True,
         verbose_name='Юзернейм'
     )
     first_name = models.CharField(
-        max_length=150,
+        max_length=USER_MAX,
         verbose_name='Имя'
     )
     last_name = models.CharField(
-        max_length=150,
+        max_length=USER_MAX,
         verbose_name='Фамилия'
     )
     password = models.CharField(
-        max_length=150,
+        max_length=USER_MAX,
         verbose_name='Пароль'
     )
 
@@ -55,6 +59,10 @@ class Subscriptions(models.Model):
             models.UniqueConstraint(
                 fields=['user', 'author'],
                 name='subscriptions_unique'
+            ),
+            models.CheckConstraint(
+                check=~Q(user=F('author')),
+                name='no_self_follow'
             )
         ]
         verbose_name = 'Подписка'

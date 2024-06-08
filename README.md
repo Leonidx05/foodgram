@@ -8,6 +8,14 @@
 Проект доступен по адресу fooodgrammm.hopto.org
 https://fooodgrammm.hopto.org/signin
 
+### Данные для админки
+
+```
+e-mail: admin@mail.ru
+login: admin
+password: admin
+```
+
 ## Как запустить проект
 
 Клонировать репозиторий и перейти в папку бэкенда:
